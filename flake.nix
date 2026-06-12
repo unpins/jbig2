@@ -111,9 +111,39 @@
           # so libwebp.a's `SharpYuv*` refs go unresolved. Append it (the
           # libwebp -L is already on the line from lept.pc). The native musl
           # lept.pc already includes -lsharpyuv, so this is windows-only.
-          preConfigure = (old.preConfigure or "") + ''
-            export LIBS="$(''${PKG_CONFIG:-pkg-config} --static --libs lept)${scope.lib.optionalString host.isWindows " -lsharpyuv"} -lm $LIBS"
-          '';
+          #
+          # On darwin (see the darwin block below for the libc++ shim), nothing
+          # extra is needed on this LIBS line beyond the `-lc++abi` the shim
+          # prepends into $LIBS.
+          configureFlags = (old.configureFlags or [ ])
+            # Don't build the libjbig2enc dylib on darwin: it's pointless for a
+            # single static binary, and feeding the static libc++ through
+            # libtool's shared-lib path corrupts the convenience archive
+            # (libtool `ar`s the libc++.a *into* libjbig2enc.a). `--enable-shared=no`
+            # (not `--disable-shared`, which mkStandaloneFlake's
+            # filterEnableStaticOnDarwin would strip) keeps libtool to the
+            # static archive + program link. No-op off darwin.
+            ++ scope.lib.optional host.isDarwin "--enable-shared=no";
+          preConfigure = (old.preConfigure or "")
+            # darwin: jbig2 is C++ and the toolchain auto-links the DYNAMIC
+            # /usr/lib/libc++.1.dylib, which the portability gate rejects (only
+            # libSystem/libobjc allowed; libc++ must be folded statically). Drop
+            # a -L shim exposing pkgsStatic.libcxx's static libc++.a (also as
+            # libstdc++.a) + libc++abi.a ahead of the system dylib dirs, and
+            # pass -search_paths_first so ld64 takes the .a instead of its
+            # default dylib-first resolution. The chafa/ffmpeg precedent.
+            + scope.lib.optionalString host.isDarwin ''
+              mkdir -p "$TMPDIR/cxx-static"
+              ln -sf ${s.libcxx}/lib/libc++.a    "$TMPDIR/cxx-static/libc++.a"
+              ln -sf ${s.libcxx}/lib/libc++.a    "$TMPDIR/cxx-static/libstdc++.a"
+              ln -sf ${s.libcxx}/lib/libc++abi.a "$TMPDIR/cxx-static/libc++abi.a"
+              export NIX_LDFLAGS="-L$TMPDIR/cxx-static $NIX_LDFLAGS"
+              export LDFLAGS="-Wl,-search_paths_first ''${LDFLAGS:-}"
+              export LIBS="-lc++abi ''${LIBS:-}"
+            ''
+            + ''
+              export LIBS="$(''${PKG_CONFIG:-pkg-config} --static --libs lept)${scope.lib.optionalString host.isWindows " -lsharpyuv"} -lm $LIBS"
+            '';
           # Ship ONLY the `jbig2` encoder binary. Drop:
           #   - the Python PDF muxer (out of scope; see header),
           #   - the static library + headers (libjbig2enc.a/.la, include/) — the
