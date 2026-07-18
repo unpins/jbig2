@@ -181,6 +181,16 @@
       # withMan graft (it would just warn-and-skip otherwise).
       embedMan = false;
 
+      # Build via the unpin-llvm engine + emit a bitcode multicall module. Single
+      # binary (`jbig2`), so the standalone self-folds N=1 from its own module.bc.
+      # The C++ CLI over the image stack (leptonica + jpeg/png/tiff/webp/openjpeg/
+      # giflib/zlib) compiles to bitcode; libjpeg-turbo SIMD rides the native
+      # sidecar. Windows stays the objcopy/mingw path below.
+      engine = "unpin-llvm";
+      multicall = {
+        programs = [{ name = "jbig2"; }];
+      };
+
       build = pkgs: mk pkgs.pkgsStatic;
       # C++ over the image stack. `jbig2` is linked through libtool (there's a
       # libjbig2enc.la), so a bare `-static` in NIX_LDFLAGS doesn't reach the
