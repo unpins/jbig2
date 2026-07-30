@@ -29,16 +29,12 @@
       #
       # The encoder pulls leptonica + the image-codec stack (giflib / libjpeg /
       # libpng / libtiff / libwebp / openjpeg / zlib) — all already proven as
-      # static deps across the catalogue. The one per-target wrinkle is the
-      # shared riscv64 libjpeg-turbo `simdcoverage` fix (same overlay openjpeg /
-      # jpeg-tools / chafa use); identity off riscv so other arches cache-hit.
+      # static deps across the catalogue.
       mk = scope:
         let
           host = scope.stdenv.hostPlatform;
           s = scope.extend (final: prev:
-            (scope.lib.optionalAttrs host.isRiscV {
-              libjpeg = ulib.nativeFixes."libjpeg-turbo" prev;
-            }) // (scope.lib.optionalAttrs host.isWindows (
+            (scope.lib.optionalAttrs host.isWindows (
               let
                 # libtiff auto-enables libjpeg 8/12-bit dual mode via a cmake
                 # `check_c_source_compiles` probe (HAVE_JPEGTURBO_DUAL_MODE_8_12)
