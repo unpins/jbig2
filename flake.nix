@@ -1,18 +1,16 @@
 {
-  description = ''
-    The jbig2enc JBIG2 encoder (`jbig2`) as a single self-contained binary.
+  description = "jbig2 (the jbig2enc JBIG2 encoder) as a single self-contained binary";
 
-    jbig2enc ships two things in bin/: the C++ encoder `jbig2`, and
-    `jbig2topdf.py`, a pure-stdlib Python script that muxes the encoder's
-    multipage symbol-coded output (`jbig2 -s -p ...`) into a PDF. We ship ONLY
-    the encoder `jbig2` — bundling a whole CPython runtime just to run a
-    ~150-line PDF byte-emitter is disproportionate for a single static binary
-    (see README). `python3` is therefore dropped (it was an input only so the
-    install could patch the script's shebang).
-
-    The binary is named `jbig2` (= upstream mainProgram, the actual command), so
-    the flake `name` is `jbig2` too; the nixpkgs attr is `jbig2enc` (pkgsAttr).
-  '';
+  # jbig2enc ships two things in bin/: the C++ encoder `jbig2`, and
+  # `jbig2topdf.py`, a pure-stdlib Python script that muxes the encoder's
+  # multipage symbol-coded output (`jbig2 -s -p ...`) into a PDF. We ship ONLY
+  # the encoder `jbig2` -- bundling a whole CPython runtime just to run a
+  # ~150-line PDF byte-emitter is disproportionate for a single static binary
+  # (see README). `python3` is therefore dropped (it was an input only so the
+  # install could patch the script's shebang).
+  #
+  # The binary is named `jbig2` (= upstream mainProgram, the actual command), so
+  # the flake `name` is `jbig2` too; the nixpkgs attr is `jbig2enc` (pkgsAttr).
 
   nixConfig = {
     extra-substituters = [ "https://unpins.cachix.org" ];
