@@ -179,22 +179,20 @@
       # binary (`jbig2`), so the standalone self-folds N=1 from its own module.bc.
       # The C++ CLI over the image stack (leptonica + jpeg/png/tiff/webp/openjpeg/
       # giflib/zlib) compiles to bitcode; libjpeg-turbo SIMD rides the native
-      # sidecar. Windows stays the objcopy/mingw path below.
+      # sidecar. Windows takes the same route.
       engine = "unpin-llvm";
       multicall = {
+        # The `.exe` on the engine too, not the nixpkgs mingw-gcc cross.
+        windows = true;
         programs = [{ name = "jbig2"; }];
       };
 
       build = pkgs: mk pkgs.pkgsStatic;
-      # C++ over the image stack. `jbig2` is linked through libtool (there's a
-      # libjbig2enc.la), so a bare `-static` in NIX_LDFLAGS doesn't reach the
-      # final link — libtool picks the `.dll.a` import libs and the DLL-copy
-      # hook drops libgcc_s_seh-1.dll / libmcfgthread-2.dll next to the exe.
-      # `LDFLAGS=-all-static` is libtool's "fully static" switch (the jq
-      # precedent); it folds libstdc++/libgcc/mcfgthread/winpthread so a single
-      # self-contained jbig2.exe ships with no companion DLLs.
-      windowsBuild = pkgs: (mk (ulib.mingwStaticCross pkgs)).overrideAttrs (old: {
-        makeFlags = (old.makeFlags or [ ]) ++ [ "LDFLAGS=-all-static" ];
-      });
+      # The `.exe` comes off the engine (clang/lld + libc++, static-only), so
+      # there is no mingw-gcc runtime to fold: the `LDFLAGS=-all-static` that
+      # used to keep libtool off the `.dll.a` import libs (and libgcc_s_seh-1 /
+      # libmcfgthread-2 away from the exe) has nothing left to do. Measured,
+      # not assumed — the `.exe` built without it is byte-identical.
+      windowsBuild = pkgs: mk (ulib.mingwStaticCross pkgs);
     };
 }
