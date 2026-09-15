@@ -14,9 +14,8 @@ Part of the [unpins](https://unpins.org) catalog; install it with [`unpin`](http
 Run the `jbig2` program with [unpin](https://github.com/unpins/unpin):
 
 ```bash
-unpin jbig2 --version                 # version banner
-unpin jbig2 input.png > out.jb2       # encode to a JBIG2 stream
-unpin jbig2 -s -p page1.png page2.png # symbol-coded, PDF-ready output
+unpin jbig2 input.png > out.jb2                 # encode a page to a JBIG2 file
+unpin jbig2 -s -p -b output page1.png page2.png # symbol-coded, PDF-ready output
 ```
 
 To install it onto your PATH:
@@ -25,9 +24,9 @@ To install it onto your PATH:
 unpin install jbig2
 ```
 
-JBIG2 is the bilevel-image codec used inside PDF and fax workflows; `jbig2`
-reads the usual raster formats (PNG/TIFF/JPEG/…, via leptonica) and emits the
-compressed JBIG2 data.
+JBIG2 is the black-and-white image format used inside PDF files and fax
+workflows. `jbig2` reads PNG, TIFF, JPEG, GIF, WebP, JPEG 2000, BMP and PNM pages
+(color and gray pages are turned to black and white first) and writes JBIG2.
 
 ## Scope: encoder only (no `jbig2topdf.py`)
 
@@ -68,28 +67,10 @@ The [Releases](https://github.com/unpins/jbig2/releases) page has standalone bin
 
 ## Build notes
 
-- **Encoder only.** Upstream's `jbig2topdf.py` is dropped (see above), and with
-  it the `python3` input — it was present only so the install could patch that
-  script's shebang. The output is just `bin/jbig2`; the static library, headers,
-  and the `nix-support` metadata that would otherwise pin store paths are all
-  trimmed, so the binary and its whole closure carry no `/nix/store` reference.
-
-- **leptonica + the image-codec stack, statically.** `jbig2` links leptonica,
-  which pulls giflib / libjpeg-turbo / libpng / libtiff / libwebp / openjpeg /
-  zlib. jbig2enc's `configure` probes leptonica with a bare `-lleptonica`, which
-  can't resolve against a static `libleptonica.a`'s transitive closure; we feed
-  the full closure via `pkg-config --static --libs lept` so both the probe and
-  the final link succeed.
-
-- **Windows (mingw) cross.** The mingw image stack needs four extra touches to
-  link fully static: libtiff's auto-detected libjpeg 8/12-bit *dual mode* is
-  turned off (its cmake probe is a false positive — the mingw libjpeg-turbo `.a`
-  has no `jpeg12_*` symbols); leptonica is built library-only and with
-  `-DOPJ_STATIC` (so its openjpeg calls don't expect a DLL import lib);
-  `libsharpyuv` is added to the link (libwebp splits it out); and the libtool
-  link uses `-all-static` so the single `jbig2.exe` ships with no companion
-  DLLs.
-
-- **Portable on every target.** Linux/Windows binaries are fully static (`file`
-  reports `statically linked`; the `.exe` imports only Windows system DLLs);
-  macOS links only `/usr/lib/libSystem` and `/usr/lib/libc++` (`otool -L`).
+- **Encoder only** — the PDF helper `jbig2topdf.py` is not included (see above).
+- **Symbol mode (`-s`) is lossy** by design: similar-looking symbols are merged,
+  so the decoded page can differ slightly from the input. The default generic
+  mode is lossless. Refinement (`-r`), meant to make symbol mode lossless, is
+  broken upstream: it prints "Refinement broke in recent releases" and exits.
+- **Windows:** a single `.exe`, no companion DLLs.
+- **No man pages** — jbig2enc ships none; run `jbig2 -h`.

@@ -2,19 +2,11 @@
 
 ## [Unreleased]
 
-### Changed
+Initial release — `jbig2` (jbig2enc 0.31) as a single self-contained binary,
+built natively for Linux, macOS, and Windows.
 
-- The Windows binary is now built by the same compiler as the Linux and macOS
-  ones, and is 51% smaller (5.22 MB to 2.54 MB). Checked on Windows 10 against
-  the previous binary: same version banner, and PNG, TIFF, JPEG, PBM and BMP
-  pages encode to byte-identical output, in both plain and symbol mode.
+### Added
 
-  It now uses the Universal C Runtime, which is part of Windows 10 and later.
-  On Windows 7 or 8.1 that runtime has to be installed first — it comes through
-  Windows Update. The previous binary did not need it.
-
-### Fixed
-
-- On Windows, symbol-mode output (`-s`) for a large page could differ by a few
-  bytes from what the Linux and macOS binaries produce for the same input. All
-  three now agree exactly.
+- Builds for Linux (x86_64, i686, aarch64, armv7l, ppc64le, riscv64), macOS
+  (x86_64, aarch64), and Windows (x86_64).
+- Reads PNG, TIFF, JPEG, GIF, WebP, JPEG 2000, BMP and PNM pages.

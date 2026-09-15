@@ -160,6 +160,42 @@
             rm -rf "$out/nix-support"
           '';
         });
+
+      # A `--version` smoke passes an encoder whose output is wrong, so the
+      # native build encodes for real: a generic-coded page must decode (with
+      # jbig2dec) back to the exact input, and a symbol-coded page — lossy by
+      # design — must decode to a page of the same size. The page is a PBM
+      # generated with awk. Runs wherever the build machine can execute the
+      # result.
+      withRoundTrip = pkgs: drv: drv.overrideAttrs (old: {
+        doInstallCheck = pkgs.stdenv.buildPlatform.canExecute pkgs.stdenv.hostPlatform;
+        nativeInstallCheckInputs = (old.nativeInstallCheckInputs or [ ])
+          ++ [ pkgs.buildPackages.jbig2dec ];
+        installCheckPhase = ''
+          runHook preInstallCheck
+          j="$out/bin/jbig2"
+          fail() { echo "installCheck: $*"; exit 1; }
+          LC_ALL=C awk 'BEGIN {
+            w = 240; h = 120; printf "P4\n%d %d\n", w, h
+            for (y = 0; y < h; y++)
+              for (x = 0; x < w; x += 8) {
+                b = 0
+                for (k = 0; k < 8; k++)
+                  if (((int((x + k) / 8) + int(y / 12)) % 3 == 0 && y % 12 < 9 && (x + k) % 8 < 6) || (x + k) == y) b += 2 ^ (7 - k)
+                printf "%c", b
+              }
+          }' > page.pbm
+          test "$(wc -c < page.pbm)" -eq 3611 || fail "probe page has the wrong size"
+          "$j" page.pbm > generic.jb2 || fail "cannot encode"
+          jbig2dec -o back.pbm generic.jb2
+          cmp -s page.pbm back.pbm || fail "generic encode does not decode to the input"
+          "$j" -s page.pbm > symbol.jb2 || fail "cannot encode in symbol mode"
+          jbig2dec -o back-symbol.pbm symbol.jb2 || fail "symbol encode does not decode"
+          test "$(wc -c < back-symbol.pbm)" -eq "$(wc -c < page.pbm)" || fail "symbol encode decodes to a page of another size"
+          echo "installCheck: generic encode decodes to the input, symbol encode decodes"
+          runHook postInstallCheck
+        '';
+      });
     in
     ulib.mkStandaloneFlake {
       inherit self;
@@ -187,7 +223,7 @@
         programs = [{ name = "jbig2"; }];
       };
 
-      build = pkgs: mk pkgs.pkgsStatic;
+      build = pkgs: withRoundTrip pkgs (mk pkgs.pkgsStatic);
       # The `.exe` comes off the engine (clang/lld + libc++, static-only), so
       # there is no mingw-gcc runtime to fold: the `LDFLAGS=-all-static` that
       # used to keep libtool off the `.dll.a` import libs (and libgcc_s_seh-1 /
