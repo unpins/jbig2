@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.31-1] - 2026-09-26
+
 Initial release — `jbig2` (jbig2enc 0.31) as a single self-contained binary,
 built natively for Linux, macOS, and Windows.
 
