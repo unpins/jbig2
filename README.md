@@ -72,5 +72,5 @@ The [Releases](https://github.com/unpins/jbig2/releases) page has standalone bin
   so the decoded page can differ slightly from the input. The default generic
   mode is lossless. Refinement (`-r`), meant to make symbol mode lossless, is
   broken upstream: it prints "Refinement broke in recent releases" and exits.
-- **Windows:** a single `.exe`, no companion DLLs.
+- **Windows:** built with mingw-w64.
 - **No man pages** — jbig2enc ships none; run `jbig2 -h`.
