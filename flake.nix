@@ -117,7 +117,11 @@
             # (not `--disable-shared`, which mkStandaloneFlake's
             # filterEnableStaticOnDarwin would strip) keeps libtool to the
             # static archive + program link. No-op off darwin.
-            ++ scope.lib.optional host.isDarwin "--enable-shared=no";
+            ++ scope.lib.optional host.isDarwin "--enable-shared=no"
+            # configure finds ws2_32 by probing `_head_lib64_libws2_32_a`, a
+            # symbol only GNU dlltool's import libs carry; the engine's crt is
+            # made by llvm-dlltool, so the probe fails and htonl goes unlinked.
+            ++ scope.lib.optional host.isWindows "ac_cv_lib_ws2_32__head_lib64_libws2_32_a=yes";
           preConfigure = (old.preConfigure or "")
             # darwin: jbig2 is C++ and the toolchain auto-links the DYNAMIC
             # /usr/lib/libc++.1.dylib, which the portability gate rejects (only
