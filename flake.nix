@@ -33,33 +33,13 @@
           host = scope.stdenv.hostPlatform;
           s = scope.extend (final: prev:
             (scope.lib.optionalAttrs host.isWindows (
-              let
-                # libtiff auto-enables libjpeg 8/12-bit dual mode via a cmake
-                # `check_c_source_compiles` probe (HAVE_JPEGTURBO_DUAL_MODE_8_12)
-                # that only *compiles* a `jpeg12_read_scanlines()` call. On
-                # mingw the libjpeg-turbo HEADERS declare that API but the `.a`
-                # ships no `jpeg12_*` symbols (built without dual mode), so the
-                # probe is a false positive: tif_jpeg12.c gets compiled and any
-                # full static link of libtiff (leptonica, jbig2) fails with
-                # `undefined reference to jpeg12_*`. The `jpeg12` cmake OPTION
-                # only governs the *separate-lib* fallback branch, so it can't
-                # turn this off — pre-seed the probe's cache var to false
-                # instead, which routes libtiff to single-mode (as the musl
-                # build already is, which is why native links cleanly).
-                # Rebuilds libtiff → leptonica for windows only.
-                tiff = prev.libtiff.overrideAttrs (to: {
-                  cmakeFlags = (to.cmakeFlags or [ ])
-                    ++ [ "-DHAVE_JPEGTURBO_DUAL_MODE_8_12=OFF" "-Djpeg12=OFF" ];
-                });
-              in
               {
-                libtiff = tiff;
-                # leptonica against the jpeg12-off libtiff, AND restricted to
-                # src/: its autotools build otherwise also compiles the demo
-                # programs (prog/converttopdf.exe …), which fail the same mingw
-                # static link (they also pull libwebp's SharpYuv, split into a
-                # separate libsharpyuv.a). We only need liblept.a.
-                leptonica = (prev.leptonica.override { libtiff = tiff; }).overrideAttrs (lo: {
+                # leptonica restricted to src/: its autotools build otherwise
+                # also compiles the demo programs (prog/converttopdf.exe …),
+                # which fail the mingw static link (they pull libwebp's
+                # SharpYuv, split into a separate libsharpyuv.a). We only need
+                # liblept.a.
+                leptonica = prev.leptonica.overrideAttrs (lo: {
                   makeFlags = (lo.makeFlags or [ ]) ++ [ "SUBDIRS=src" ];
                   installFlags = (lo.installFlags or [ ]) ++ [ "SUBDIRS=src" ];
                   # leptonica's jp2kio.c uses the openjpeg API. Without
